@@ -7,8 +7,8 @@
 // - teamEmail: Supabase Authentication에 만든 팀 공용 계정의 이메일. 화면에서는 비밀번호만 묻습니다.
 // - kakaoJsKey: 선택. 넣으면 "카카오내비" 버튼이 켜집니다.
 export const CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
-  teamEmail: '',
+  supabaseUrl: 'https://lfalmsrsnabawhwytcas.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmYWxtc3JzbmFiYXdod3l0Y2FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMzUyNDQsImV4cCI6MjEwODkxMTI0NH0.DB14StUtEod6mhNaw2hren2GoFL0hbYPtBWgVZYeETY',
+  teamEmail: 'fieldteam@example.com',
   kakaoJsKey: '',
 };
