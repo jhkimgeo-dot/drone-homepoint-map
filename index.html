@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>내 장소</title>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <h1>내 장소</h1>
+          <span id="sync" class="sync" data-state="off" role="status" aria-live="polite"></span>
+        </div>
+        <div class="actions">
+          <label class="btn primary" for="csv-input">CSV 가져오기</label>
+          <input id="csv-input" type="file" accept=".csv,.tsv,.txt,text/csv" hidden />
+          <button id="export" class="btn" type="button">내보내기</button>
+          <button id="logout" class="btn ghost" type="button" title="로그아웃">나가기</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <div id="map" class="map" aria-label="지도"></div>
+
+        <aside class="panel">
+          <section id="import-panel" class="card" hidden></section>
+          <section id="detail" class="card detail" hidden></section>
+
+          <div class="filters">
+            <input id="search" class="search" type="search" placeholder="이름·주소·메모 검색" autocomplete="off" />
+            <div id="color-filters" class="chips" role="group" aria-label="색상으로 거르기"></div>
+          </div>
+
+          <p id="list-summary" class="summary"></p>
+          <ul id="place-list" class="list"></ul>
+
+          <div id="empty" class="card empty" hidden>
+            <h2>아직 저장한 장소가 없습니다</h2>
+            <p>CSV 파일을 가져오거나 이 화면에 끌어다 놓으세요. 첫 줄은 머리글이어야 하고, 아래 열을 읽습니다.</p>
+            <ul>
+              <li><b>필수</b> 이름, 위도, 경도</li>
+              <li><b>선택</b> 주소, 전화번호, 색상, 메모</li>
+            </ul>
+            <pre>이름,주소,위도,경도,색상
+판교역,경기 성남시 분당구 판교역로 160,37.3948,127.1112,파랑</pre>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <!-- 팀 공용 비밀번호 로그인 -->
+    <div id="gate" class="gate" hidden>
+      <form id="login-form" class="card gate-card" hidden>
+        <h2>내 장소</h2>
+        <p class="hint">팀 공용 비밀번호를 입력해 주세요. 한 번 들어오면 이 기기에서는 로그인이 유지됩니다.</p>
+        <input id="login-password" class="search" type="password" autocomplete="current-password" placeholder="비밀번호" required />
+        <button id="login-submit" class="btn primary" type="submit">들어가기</button>
+        <p id="login-error" class="gate-error" role="alert" hidden></p>
+      </form>
+      <div id="setup-needed" class="card gate-card" hidden>
+        <h2>설정이 필요합니다</h2>
+        <p class="hint">config.js에 Supabase 주소·키와 팀 계정 이메일을 넣어야 사이트가 동작합니다. 저장소의 README "처음 설정"을 참고해 주세요.</p>
+      </div>
+    </div>
+
+    <div class="drop-overlay" aria-hidden="true"><p>CSV 파일을 놓으면 가져옵니다</p></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="vendor/supabase.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

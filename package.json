@@ -1,0 +1,10 @@
+{
+  "name": "drone-homepoint-map",
+  "version": "2.0.0",
+  "private": true,
+  "description": "드론 현장팀 홈포인트 지도·길안내 웹 (GitHub Pages + Supabase, 여러 명이 실시간 공유)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
