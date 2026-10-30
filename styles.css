@@ -661,3 +661,93 @@ body.dragging .drop-overlay {
 .gate-error[hidden] {
   display: none;
 }
+
+/* ── 권한 구분: 현장 계정에는 등록·내보내기·이력·삭제를 보여 주지 않는다 ── */
+body:not([data-role='admin']) .admin-only {
+  display: none !important;
+}
+
+.role-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.role-badge[hidden] {
+  display: none;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#history-panel[hidden] {
+  display: none;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.history-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.history-list li:first-child {
+  border-top: 0;
+}
+
+.history-list .what {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.history-list .when {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-list .btn {
+  flex: none;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 420px) {
+  .actions .btn.admin-only {
+    padding: 0 8px;
+  }
+}
+
+/* 관리자 화면은 상단 버튼이 많아서, 좁은 화면에서는 버튼 줄을 아래로 내려 가로로 넘치지 않게 한다 */
+.topbar {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+.actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}

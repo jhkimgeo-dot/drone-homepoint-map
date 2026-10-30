@@ -4,11 +4,13 @@
 //   anon(public) 키는 브라우저에 공개되도록 만들어진 키라서 여기에 적어도 됩니다.
 //   데이터는 DB의 행 수준 보안(RLS) 때문에 팀 비밀번호로 로그인한 사람만 읽고 쓸 수 있습니다.
 //   service_role 키는 절대 여기에 넣지 마세요.
-// - teamEmail: Supabase Authentication에 만든 팀 공용 계정의 이메일. 화면에서는 비밀번호만 묻습니다.
+// - teamEmail: 현장용 공용 계정 이메일(보기·색상·메모만 가능). 화면에서는 비밀번호만 묻습니다.
+// - adminEmail: 관리자 계정 이메일(CSV 등록·삭제·이력·복구 가능). 로그인 화면의 "관리자"를 체크하면 이 계정으로 들어갑니다.
 // - kakaoJsKey: 선택. 넣으면 "카카오내비" 버튼이 켜집니다.
 export const CONFIG = {
   supabaseUrl: 'https://lfalmsrsnabawhwytcas.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxmYWxtc3JzbmFiYXdod3l0Y2FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMzUyNDQsImV4cCI6MjEwODkxMTI0NH0.DB14StUtEod6mhNaw2hren2GoFL0hbYPtBWgVZYeETY',
   teamEmail: 'fieldteam@example.com',
+  adminEmail: 'fieldteam-admin@example.com',
   kakaoJsKey: '',
 };

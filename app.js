@@ -17,6 +17,9 @@ const state = {
   importResult: null,
   importing: false,
   signedIn: false,
+  role: 'field',
+  historyOpen: false,
+  history: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -258,7 +261,7 @@ function renderDetail() {
     ),
     !state.naviEnabled && h('p', { class: 'hint' }, '카카오내비 바로 연결은 카카오 앱 키가 있어야 켜집니다. 휴대폰에서 "카카오맵 길찾기"를 누르면 카카오맵 앱의 자동차 길찾기가 열립니다.'),
     h('label', { class: 'memo' }, '메모', memo),
-    h('button', { type: 'button', class: 'link danger', onclick: () => removePlace(p) }, '이 장소 삭제'),
+    h('button', { type: 'button', class: 'link danger admin-only', onclick: () => removePlace(p) }, '이 장소 삭제'),
   );
 
   if (editing) {
@@ -411,6 +414,7 @@ async function saveMemo(id, memo) {
 }
 
 async function removePlace(place) {
+  if (state.role !== 'admin') return;
   if (!confirm(`"${place.name}"을(를) 삭제할까요?`)) return;
   try {
     await store.deletePlace(place.id);
@@ -424,6 +428,7 @@ async function removePlace(place) {
 }
 
 function startImport(file) {
+  if (state.role !== 'admin') return;
   state.importFile = file;
   state.importResult = null;
   renderImport();
@@ -474,6 +479,103 @@ $('#csv-input').addEventListener('change', (e) => {
 
 $('#export').addEventListener('click', exportCsv);
 
+// ── 변경·삭제 이력 (관리자) ───────────────────────────────
+
+const ROLE_LABEL = { admin: '관리자', field: '현장' };
+const clip = (s = '') => (s.length > 30 ? `${s.slice(0, 30)}…` : s || '(없음)');
+const fmtTime = (iso) =>
+  new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+
+function describeChange(row) {
+  const o = row.old_row ?? {};
+  const n = row.new_row ?? {};
+  if (row.action === 'DELETE') return `삭제 · ${o.name}`;
+  const parts = [];
+  if (o.color !== n.color) parts.push(`색상 ${colorLabel(o.color)} → ${colorLabel(n.color)}`);
+  if (o.memo !== n.memo) parts.push(`메모 "${clip(o.memo)}" → "${clip(n.memo)}"`);
+  return `${o.name} · ${parts.join(', ') || '수정'}`;
+}
+
+function renderHistory() {
+  const box = $('#history-panel');
+  box.hidden = !state.historyOpen;
+  if (!state.historyOpen) {
+    box.replaceChildren();
+    return;
+  }
+  const rows = state.history;
+  box.replaceChildren(
+    h(
+      'div',
+      { class: 'import-head' },
+      h('h2', {}, '변경·삭제 이력'),
+      h('button', { type: 'button', class: 'icon-btn', 'aria-label': '닫기', onclick: closeHistory }, '×'),
+    ),
+    h('p', { class: 'hint' }, '최근 100건입니다. 삭제된 장소는 "복구"를 누르면 같은 번호로 되살아납니다.'),
+    rows === null ? h('p', { class: 'hint' }, '불러오는 중…')
+    : rows.length === 0 ? h('p', { class: 'hint' }, '아직 기록이 없습니다.')
+    : h(
+        'ul',
+        { class: 'history-list' },
+        rows.map((r) =>
+          h(
+            'li',
+            {},
+            h(
+              'div',
+              { class: 'what' },
+              h('div', {}, describeChange(r)),
+              h('div', { class: 'when' }, `${fmtTime(r.changed_at)} · ${ROLE_LABEL[r.changed_role] ?? r.changed_role}`),
+            ),
+            r.action === 'DELETE' &&
+              (r.restored_at
+                ? h('span', { class: 'when' }, '복구됨')
+                : h('button', { type: 'button', class: 'btn', onclick: () => restoreFromHistory(r) }, '복구')),
+          ),
+        ),
+      ),
+  );
+}
+
+async function loadHistory() {
+  try {
+    state.history = await store.listHistory();
+  } catch (err) {
+    state.history = [];
+    toast(err.message);
+  }
+  renderHistory();
+}
+
+async function openHistory() {
+  if (state.role !== 'admin') return;
+  state.historyOpen = true;
+  state.history = null;
+  renderHistory();
+  $('.panel').scrollTo({ top: 0, behavior: 'smooth' });
+  await loadHistory();
+}
+
+function closeHistory() {
+  state.historyOpen = false;
+  state.history = null;
+  renderHistory();
+}
+
+async function restoreFromHistory(row) {
+  try {
+    const restoredId = await store.restorePlace(row.id);
+    await reloadPlaces();
+    render();
+    toast(restoredId == null ? '같은 이름·좌표의 장소가 이미 있어 복구하지 않았습니다.' : `"${row.old_row?.name}"을(를) 복구했습니다.`);
+  } catch (err) {
+    toast(err.message);
+  }
+  await loadHistory();
+}
+
+$('#history-open').addEventListener('click', () => (state.historyOpen ? closeHistory() : openHistory()));
+
 $('#search').addEventListener('input', (e) => {
   state.query = e.target.value;
   render();
@@ -487,7 +589,7 @@ document.addEventListener('keydown', (e) => {
 let dragDepth = 0;
 const hasFiles = (e) => e.dataTransfer?.types.includes('Files');
 window.addEventListener('dragenter', (e) => {
-  if (!hasFiles(e) || !state.signedIn) return;
+  if (!hasFiles(e) || state.role !== 'admin') return;
   dragDepth++;
   document.body.classList.add('dragging');
 });
@@ -504,7 +606,7 @@ window.addEventListener('drop', (e) => {
   dragDepth = 0;
   document.body.classList.remove('dragging');
   const [file] = e.dataTransfer.files;
-  if (file && state.signedIn) startImport(file);
+  if (file && state.role === 'admin') startImport(file);
 });
 
 // ── 실시간 동기화 ───────────────────────────────────────
@@ -565,6 +667,13 @@ document.addEventListener('visibilitychange', () => {
 
 // ── 로그인 ──────────────────────────────────────────────
 
+// 관리자만 등록·삭제·이력 버튼이 보인다(화면 표시용. 실제 권한은 DB가 검사한다).
+function setRole(role) {
+  state.role = role;
+  document.body.dataset.role = role;
+  $('#role-badge').hidden = role !== 'admin';
+}
+
 function showGate(which) {
   $('#gate').hidden = false;
   $('#login-form').hidden = which !== 'login';
@@ -586,7 +695,7 @@ $('#login-form').addEventListener('submit', async (e) => {
   button.textContent = '확인 중…';
   error.hidden = true;
   try {
-    await store.signIn($('#login-password').value);
+    await store.signIn($('#login-password').value, $('#login-admin').checked);
     await enter();
   } catch (err) {
     error.textContent = err.message;
@@ -604,6 +713,7 @@ $('#logout').addEventListener('click', async () => {
 
 async function enter() {
   if (state.signedIn) return;
+  setRole(store.roleOf(await store.currentSession()));
   await reloadPlaces();
   state.signedIn = true;
   hideGate();
@@ -622,14 +732,20 @@ function leave() {
   state.places = [];
   state.selectedId = null;
   state.importFile = null;
+  state.historyOpen = false;
+  state.history = null;
+  setRole('field');
+  $('#login-admin').checked = false;
   render();
   renderImport();
+  renderHistory();
   showGate('login');
 }
 
 // ── 시작 ────────────────────────────────────────────────
 
 async function boot() {
+  setRole('field');
   if (CONFIG.kakaoJsKey) {
     state.naviEnabled = true;
     initKakaoSdk(CONFIG.kakaoJsKey).catch((err) => {

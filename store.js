@@ -8,7 +8,7 @@ const BATCH = 500;
 // 좌표는 소수점 7자리(약 1cm)로 맞춰 저장해서 중복 판정이 부동소수 오차에 흔들리지 않게 한다.
 const roundCoord = (n) => Math.round(n * 1e7) / 1e7;
 
-export const isConfigured = () => Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && CONFIG.teamEmail);
+export const isConfigured = () => Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && CONFIG.teamEmail && CONFIG.adminEmail);
 
 let client;
 function db() {
@@ -21,7 +21,9 @@ function db() {
 function friendly(error) {
   const msg = String(error?.message ?? error ?? '');
   if (/invalid login credentials/i.test(msg)) return '비밀번호가 맞지 않습니다.';
-  if (/jwt|not authorized|permission denied|row-level security/i.test(msg)) return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+  if (/jwt|not authorized/i.test(msg)) return '로그인이 만료되었습니다. 다시 로그인해 주세요.';
+  if (/permission denied|row-level security|admin only/i.test(msg)) return '권한이 없습니다. 이 작업은 관리자만 할 수 있습니다.';
+  if (/not restorable/i.test(msg)) return '이미 복구했거나 복구할 수 없는 기록입니다.';
   if (/failed to fetch|networkerror|network request failed|load failed/i.test(msg)) return '인터넷 연결을 확인해 주세요.';
   if (/places_color_check/.test(msg)) return '알 수 없는 색상입니다.';
   if (/places_memo_check/.test(msg)) return '메모가 너무 깁니다. (최대 2000자)';
@@ -49,8 +51,14 @@ export async function currentSession() {
   return data.session;
 }
 
-export async function signIn(password) {
-  await run(db().auth.signInWithPassword({ email: CONFIG.teamEmail, password }));
+// 관리자는 관리자 계정, 그 외에는 현장 공용 계정으로 들어간다.
+export async function signIn(password, asAdmin = false) {
+  await run(db().auth.signInWithPassword({ email: asAdmin ? CONFIG.adminEmail : CONFIG.teamEmail, password }));
+}
+
+// 로그인 토큰의 app_metadata.role 로 관리자 여부를 안다. 이 값은 사용자가 바꿀 수 없고, 실제 권한은 DB가 다시 검사한다.
+export function roleOf(session) {
+  return session?.user?.app_metadata?.role === 'admin' ? 'admin' : 'field';
 }
 
 export async function signOut() {
@@ -126,3 +134,18 @@ export async function subscribe({ onUpsert, onDelete, onStatus }) {
     .subscribe((status) => onStatus(status));
   return () => db().removeChannel(channel);
 }
+
+// ── 변경 이력·복구 (관리자 전용) ──────────────────────────
+
+// 최근 수정·삭제 기록. 등록(INSERT)은 CSV 한 번에 수백 건이 쌓여서 뺀다.
+export const listHistory = (limit = 100) =>
+  run(
+    db()
+      .from('places_history')
+      .select('id,place_id,action,old_row,new_row,changed_by,changed_role,changed_at,restored_at')
+      .in('action', ['UPDATE', 'DELETE'])
+      .order('id', { ascending: false })
+      .limit(limit),
+  );
+
+export const restorePlace = (historyId) => run(db().rpc('restore_place', { history_id: historyId }));
